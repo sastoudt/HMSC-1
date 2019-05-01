@@ -1,4 +1,4 @@
-updateZ = function(Y,Z,Beta,iSigma,Eta,Lambda, X,Pi,dfPi,distr,rL, ind){
+updateZ = function(Y,Z,Beta,iSigma,Eta,Lambda, X,Pi,dfPi,distr,rL, ind, EtaStar){
    ZPrev = Z
    ny = nrow(Y)
    ns = ncol(Y)
@@ -15,47 +15,61 @@ updateZ = function(Y,Z,Beta,iSigma,Eta,Lambda, X,Pi,dfPi,distr,rL, ind){
             LFix[,j] = X[[j]]%*%Beta[,j]
       }
    )
-   LRan = vector("list", nr)
+   LRan = LRanStar = vector("list", nr)
    for(r in seq_len(nr)){
       if(rL[[r]]$xDim == 0){
          LRan[[r]] = Eta[[r]][Pi[,r],]%*%Lambda[[r]]
+         LRanStar[[r]] = EtaStar[[r]][Pi[,r],]%*%Lambda[[r]]
       } else{
-         LRan[[r]] = matrix(0,ny,ns)
-         for(k in 1:rL[[r]]$xDim)
-            LRan[[r]] = LRan[[r]] + (Eta[[r]][Pi[,r],]*rL[[r]]$x[as.character(dfPi[,r]),k]) %*% Lambda[[r]][,,k]
+         LRan[[r]] = LRanStar[[r]] = matrix(0,ny,ns)
+         for(k in 1:rL[[r]]$xDim){
+             LRan[[r]] = LRan[[r]] + (Eta[[r]][Pi[,r],]*rL[[r]]$x[as.character(dfPi[,r]),k]) %*% Lambda[[r]][,,k]
+             LRanStar[[r]] = LRanStar[[r]] + (EtaStar[[r]][Pi[,r],]*rL[[r]]$x[as.character(dfPi[,r]),k]) %*% Lambda[[r]][,,k]
+
+         }
       }
    }
    if(nr > 0){
       E = LFix + Reduce("+", LRan)
+      EStar=LFix + Reduce("+", LRanStar)
    } else
       E = LFix
 
-   Z = matrix(NA,ny,ns)
+   Z = ZStar = matrix(NA,ny,ns)
    indNA = is.na(Y)
    std = matrix(iSigma^-0.5,ny,ns,byrow=TRUE)
 
    indColNormal = (distr[,1]==1)
    Z[,indColNormal] = Y[,indColNormal]
+   ZStar[,indColNormal] = Y[,indColNormal]
 
    indColProbit = (distr[,1]==2)
    pN = sum(indColProbit)
    if(pN > 0){
-      ZProbit = matrix(NA,ny,pN)
+      ZProbit = ZStarProbit = matrix(NA,ny,pN)
       YProbit = Y[,indColProbit]
       EProbit = E[,indColProbit]
+      EStarProbit = EStar[,indColProbit]
       stdProbit = std[,indColProbit]
       indCellProbit = !indNA[,indColProbit]
       if(any(indCellProbit)){
          YProbit = as.logical(YProbit[indCellProbit])
          e = EProbit[indCellProbit]
+         eSTar=EStarProbit[indCellProbit]
          s = stdProbit[indCellProbit]
          lB = rep(-Inf, length(YProbit))
          uB = rep(Inf, length(YProbit))
          lB[YProbit] = 0
          uB[!YProbit] = 0
          z = rtruncnorm(length(YProbit), a=lB, b=uB, mean=e, sd=s) # this is often the bottleneck for performance
+         zStar = rtruncnorm(length(YProbit), a=lB, b=uB, mean=eStar, sd=s) # this is often the bottleneck for performance
+
          ZProbit[indCellProbit] = z
-         Z[,indColProbit] = ZProbit
+         ZProbitStar[indCellProbit] = zStar
+         Z[,indColProbit] = ZProbit         
+         ZStar[,indColProbit] = ZProbitStar
+
+         
       }
    }
 
@@ -87,7 +101,9 @@ updateZ = function(Y,Z,Beta,iSigma,Eta,Lambda, X,Pi,dfPi,distr,rL, ind){
    }
 
    Z[indNA] = rnorm(sum(indNA), E[indNA], std[indNA])
-   return(Z)
+   ZStar[indNA] = rnorm(sum(indNA), EStar[indNA], std[indNA])
+
+   return(list(Z=Z, ZStar=ZStar)) ## need to make sure whatever calls this knows that I changed the output
 }
 
 

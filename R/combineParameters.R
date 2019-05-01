@@ -1,5 +1,5 @@
 combineParameters = function(Beta, Gamma, iV, rho, iSigma, Eta,
-   Lambda,Alpha,Psi,Delta, nc, XScalePar, XInterceptInd, nt, TrScalePar, TrInterceptInd, rhopw){
+   Lambda,Alpha,Psi,Delta, nc, XScalePar, XInterceptInd, nt, TrScalePar, TrInterceptInd, rhopw, Z, ZStar){
    for(p in 1:nt){
       m = TrScalePar[1,p]
       s = TrScalePar[2,p]
@@ -28,7 +28,7 @@ combineParameters = function(Beta, Gamma, iV, rho, iSigma, Eta,
 
    V = chol2inv(chol(iV))
    sigma = 1/iSigma
-   par = list(Beta=Beta, Gamma=Gamma, V=V, rho=rhopw[rho,1], sigma=sigma, Eta=Eta, Lambda=Lambda, Alpha=Alpha, Psi=Psi, Delta=Delta)
+   par = list(Beta=Beta, Gamma=Gamma, V=V, rho=rhopw[rho,1], sigma=sigma, Eta=Eta, Lambda=Lambda, Alpha=Alpha, Psi=Psi, Delta=Delta, Z=Z, ZStar=ZStar)
 }
 
 
